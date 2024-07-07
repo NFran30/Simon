@@ -1,18 +1,24 @@
 .data
-numPrompt1: .asciiz "Enter 1st number: "  #Prompts for first number.
-
 Stack_Top: 	     #Allocates memory
 Stack_End:    .word 0:80 
 
 Simon_Array:  .word 0:80
 Player_Array: .word 0:80
 
+.data
+ColorTable: 
+	.word 0x000000     #black
+	.word 0xffff00     #yellow
+	.word 0x0000ff     #blue
+	.word 0x00ff00     #green
+	.word 0xff0000     #red
+	.word 0xffffff	   #white
+
 .text
 la $sp, Stack_End	#point $sp to memory stack
 
 ######## Main Function #############
 MAIN:
-
 
 jal Init
 
@@ -111,6 +117,39 @@ blt $t1, $s0, bLoop	#Check to see if total values have been traversed
 exitBLoop:
 
 la $sp, 0($t0)
+
+jr $ra
+
+######### Function to Lookup Color from ColorTable #############
+LookupColor:
+la $a2, ColorTable
+beq $a1, 0, colorBlack
+beq $a1, 1, colorYellow
+beq $a1, 2, colorBlue
+beq $a1, 3, colorGreen
+beq $a1, 4, colorRed
+beq $a1, 5, colorWhite
+
+colorBlack: lw $a2, 0($a2)
+j returnColor
+
+colorYellow: lw $a2, 4($a2)
+j returnColor
+
+colorBlue: lw $a2, 8($a2)
+j returnColor
+
+colorGreen: lw $a2, 12($a2)
+j returnColor
+
+colorRed: lw $a2, 16($a2)
+j returnColor
+
+colorWhite: lw $a2, 20($a2)
+j returnColor
+
+returnColor:
+add $v1, $0, $a2
 
 jr $ra
 
