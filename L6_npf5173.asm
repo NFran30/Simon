@@ -153,6 +153,29 @@ add $v1, $0, $a2
 
 jr $ra
 
+###### Draw a Dot #########
+## $a0 for x 0-31
+## $a1 for y 0-31
+## $a2 for color number 0-7
+DrawDot:
+addiu $sp, $sp, -8      #Open up two words on stack
+sw $ra, 4($sp)		#Store ra
+sw $a2, 0($sp)		#Store original a2
+
+#jal CalcAddress  #$v0 Las address for pixel
+lw $a2, 0($sp)		#Restore a2
+sw $v0, 0($sp)		#Store v0
+
+#jal GetColor     	#$v1 has color 
+lw $v0, 0($sp)    	#Restore v0
+
+sw $v1, 0($v0)   	#make dot  
+
+lw $ra, 4($sp)		#Restore original ra
+addiu $sp, $sp, 8	#Move sp back up stack
+
+jr $ra
+
 #Clear Seq
 #Clear Display
 
