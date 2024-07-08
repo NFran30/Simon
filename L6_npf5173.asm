@@ -153,10 +153,10 @@ add $v1, $0, $a2
 
 jr $ra
 
-###### Draw a Dot #########
+######Function to Draw a Dot#########
 ## $a0 for x 0-31
 ## $a1 for y 0-31
-## $a2 for color number 0-7
+## $a2 for color number 0-7 #########
 DrawDot:
 addiu $sp, $sp, -8      #Open up two words on stack
 sw $ra, 4($sp)		#Store ra
@@ -173,6 +173,49 @@ sw $v1, 0($v0)   	#make dot
 
 lw $ra, 4($sp)		#Restore original ra
 addiu $sp, $sp, 8	#Move sp back up stack
+
+jr $ra
+
+######Function to Draw a Horizontal Line#########
+## $a0 for x 0-31
+## $a1 for y 0-31
+## $a2 for color number 0-7
+## $a3 length of the horizontal line
+#####################################
+DrawHorizLine:
+addi $sp, $sp, -12	#store all changable variables to stack
+sw $ra, 8($sp)		#Store return address on stack
+sw $a1, 4($sp)		#Store a registers that could change
+sw $a2, 0($sp)
+
+add $t0, $0, 31		#Set offset for x
+mul $t0, $t0, 4
+add $t1, $0, $0		#Clear reg
+
+beq $a1, $0, HorizLoop	#No y adjustment needed when 0
+add $t2, $0, $0 	#loop counter
+yLoop: add $t1, $t1, 32	#Temp reg, Add in 32 bits to move down a row
+add $t2, $t2, 1		#increment counter
+blt $t2, $a1, yLoop	#Check condition to see if we are at reqested row
+mul $a1, $t1, 4		#Adjust for 4 bytes
+
+HorizLoop:
+mul $a0, $t3, 4		#t3 is original a0, multiply by 4 bytes
+add $a0, $a0, $t0	#add in offset for x
+
+jal DrawDot
+
+add $ra, $ra, 4
+
+lw $a1, 4($sp)		#restore register, DrawDot could change them
+lw $a2, 0($sp)
+
+add $t3, $t3, 1		#Increment next pixel
+add $a3, $a3, -1	#Decrement remaining horizontal line still to call
+bne $a3, 0, HorizLoop	#Check to see if we are done
+
+lw $ra, 8($sp)		#restore return address
+addi $sp, $sp, 12	#move stack pointer back up
 
 jr $ra
 
