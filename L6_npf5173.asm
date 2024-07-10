@@ -5,6 +5,8 @@ Stack_End:    .word 0:80
 Simon_Array:  .word 0:80
 Player_Array: .word 0:80
 
+Error_Width:   .asciiz "Error: Horizontal line is too long\n"
+
 .data
 ColorTable: 
 	.word 0x000000     #black
@@ -21,7 +23,7 @@ la $sp, Stack_End	#point $sp to memory stack
 MAIN:
 
 jal Init
-
+ 
 loopAgain:
 add $s3, $s3, 1
 jal GetRandNum
@@ -122,34 +124,34 @@ jr $ra
 
 ######### Function to Lookup Color from ColorTable #############
 LookupColor:
-la $a2, ColorTable
-beq $a1, 0, colorBlack
-beq $a1, 1, colorYellow
-beq $a1, 2, colorBlue
-beq $a1, 3, colorGreen
-beq $a1, 4, colorRed
-beq $a1, 5, colorWhite
+la $t1, ColorTable
+beq $a2, 0, colorBlack
+beq $a2, 1, colorYellow
+beq $a2, 2, colorBlue
+beq $a2, 3, colorGreen
+beq $a2, 4, colorRed
+beq $a2, 5, colorWhite
 
-colorBlack: lw $a2, 0($a2)
+colorBlack: lw $t0, 0($t1)
 j returnColor
 
-colorYellow: lw $a2, 4($a2)
+colorYellow: lw $t0, 4($t1)
 j returnColor
 
-colorBlue: lw $a2, 8($a2)
+colorBlue: lw $t0, 8($t1)
 j returnColor
 
-colorGreen: lw $a2, 12($a2)
+colorGreen: lw $t0, 12($t1)
 j returnColor
 
-colorRed: lw $a2, 16($a2)
+colorRed: lw $t0, 16($t1)
 j returnColor
 
-colorWhite: lw $a2, 20($a2)
+colorWhite: lw $t0, 20($t1)
 j returnColor
 
 returnColor:
-add $v1, $0, $a2
+add $v1, $0, $t0
 
 jr $ra
 
@@ -162,14 +164,14 @@ addiu $sp, $sp, -8      #Open up two words on stack
 sw $ra, 4($sp)		#Store ra
 sw $a2, 0($sp)		#Store original a2
 
-#jal CalcAddress  #$v0 Las address for pixel
+jal CalcAddress  #$v0 Las address for pixel
 lw $a2, 0($sp)		#Restore a2
 sw $v0, 0($sp)		#Store v0
 
-#jal GetColor     	#$v1 has color 
+jal LookupColor     	#$v1 has color 
 lw $v0, 0($sp)    	#Restore v0
 
-sw $v1, 0($v0)   	#make dot  
+sw $v1, 0($v0)   	#make dot (color pixel)
 
 lw $ra, 4($sp)		#Restore original ra
 addiu $sp, $sp, 8	#Move sp back up stack
@@ -187,35 +189,49 @@ addi $sp, $sp, -12	#store all changable variables to stack
 sw $ra, 8($sp)		#Store return address on stack
 sw $a1, 4($sp)		#Store a registers that could change
 sw $a2, 0($sp)
+sub $a3, $a3, $a1		
 
-add $t0, $0, 31		#Set offset for x
-mul $t0, $t0, 4
-add $t1, $0, $0		#Clear reg
+add $t0, $0, 32 	#Max Width of Bitmap
+sub $t0, $t0, $a0	#Current distance to wall
 
-beq $a1, $0, HorizLoop	#No y adjustment needed when 0
-add $t2, $0, $0 	#loop counter
-yLoop: add $t1, $t1, 32	#Temp reg, Add in 32 bits to move down a row
-add $t2, $t2, 1		#increment counter
-blt $t2, $a1, yLoop	#Check condition to see if we are at reqested row
-mul $a1, $t1, 4		#Adjust for 4 bytes
-
+ble $a3, $t0, HorizLoop
+la $a0 Error_Width
+li $v0, 4
+syscall
+j exit
+		
 HorizLoop:
-mul $a0, $t3, 4		#t3 is original a0, multiply by 4 bytes
-add $a0, $a0, $t0	#add in offset for x
-
 jal DrawDot
+add $a3, $a3, -1
+add $a0, $a0, 1
+bne $a3, $0, HorizLoop
 
 add $ra, $ra, 4
 
 lw $a1, 4($sp)		#restore register, DrawDot could change them
 lw $a2, 0($sp)
 
-add $t3, $t3, 1		#Increment next pixel
-add $a3, $a3, -1	#Decrement remaining horizontal line still to call
-bne $a3, 0, HorizLoop	#Check to see if we are done
-
 lw $ra, 8($sp)		#restore return address
 addi $sp, $sp, 12	#move stack pointer back up
+
+exit:li $v0, 10
+syscall
+
+######Function to Retrieve Bitmap Display Address ###########
+## $a0 for x 0-31
+## $a1 for y 0-31
+## $v0 address for color a pixel
+#############################################################
+CalcAddress:
+add $t0, $0, 0x10040000	#Starting address on Bitmap Display 0,0
+
+mul $t1, $a1, 32		#Set offset for y
+mul $t1, $t1, 4
+
+mul $t2, $a0, 4
+
+add $t1, $t1, $t2
+add $v0, $t0, $t1
 
 jr $ra
 
