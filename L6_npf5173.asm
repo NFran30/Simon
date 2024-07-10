@@ -217,6 +217,45 @@ addi $sp, $sp, 12	#move stack pointer back up
 exit:li $v0, 10
 syscall
 
+######Function to Draw a Vertical Line#########
+## $a0 for x 0-31
+## $a1 for y 0-31
+## $a2 for color number 0-7
+## $a3 length of the horizontal line
+#####################################
+DrawHorizLine:
+addi $sp, $sp, -12	#store all changable variables to stack
+sw $ra, 8($sp)		#Store return address on stack
+sw $a1, 4($sp)		#Store a registers that could change
+sw $a2, 0($sp)
+sub $a3, $a3, $a1		
+
+add $t0, $0, 32 	#Max Height of Bitmap
+sub $t0, $t0, $a1	#Current distance to wall
+
+ble $a3, $t0, VertLoop
+la $a0 Error_Width
+li $v0, 4
+syscall
+j exit
+		
+VertLoop:
+jal DrawDot
+add $a3, $a3, -1
+add $a1, $a1, 1
+bne $a3, $0, VertLoop
+
+add $ra, $ra, 4
+
+lw $a1, 4($sp)		#restore register, DrawDot could change them
+lw $a2, 0($sp)
+
+lw $ra, 8($sp)		#restore return address
+addi $sp, $sp, 12	#move stack pointer back up
+
+exit:li $v0, 10
+syscall
+
 ######Function to Retrieve Bitmap Display Address ###########
 ## $a0 for x 0-31
 ## $a1 for y 0-31
