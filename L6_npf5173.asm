@@ -15,6 +15,8 @@ ColorTable:
 	.word 0x00ff00     #green
 	.word 0xff0000     #red
 	.word 0xffffff	   #white
+	
+
 
 .text
 la $sp, Stack_End	#point $sp to memory stack
@@ -151,6 +153,28 @@ j returnColor
 
 returnColor:
 add $v1, $0, $t0
+
+jr $ra
+
+########### Function to Draw the Quadrants ########
+###################################################
+DrawQuadrants:
+
+la $t0, BoxTable	#Load address of array on stack	
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2, 8($t0)          #Load word for white pixel color
+add $a3, $0, 32		#Length of line
+
+jal DrawHorizLine 
+
+la $t0 BoxTable
+lw $a0, 60($t0)		#Load word for x variable of horiz divider
+lw $a1, 64($t0)          #Load word for y variable of horiz divider
+lw $a2, 68($t0)          #Load word for white pixel color
+add $a3, $0, 32		#Length of line
+
+jal DrawVertLine
 
 jr $ra
 
