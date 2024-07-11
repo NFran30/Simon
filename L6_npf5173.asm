@@ -33,7 +33,7 @@ jal AddNumbToSimonStack
 jal BlinkLights
 blt $s3, 20, loopAgain
 
-li   $v0, 10               #system call for exit
+exit:li   $v0, 10          #system call for exit
 syscall                    # Exit!
 
 ######## Function to initalize the program ##########
@@ -85,7 +85,6 @@ la $s1, 0($sp)		 #Store current address for Simon Stack
 la $sp, 0($t0)		 #Restore stack pointer to address on Stack_End
 
 jr $ra
-
 
 ########## Blink Lights #########
 BlinkLights:
@@ -155,27 +154,40 @@ add $v1, $0, $t0
 
 jr $ra
 
-######Function to Draw a Dot#########
+########### Function to Draw a Box ###########
 ## $a0 for x 0-31
 ## $a1 for y 0-31
-## $a2 for color number 0-7 #########
-DrawDot:
-addiu $sp, $sp, -8      #Open up two words on stack
-sw $ra, 4($sp)		#Store ra
-sw $a2, 0($sp)		#Store original a2
+## $a2 for color number 0-7
+## $a3 = size of the box 
+##############################################
+DrawBox:
+addiu $sp, $sp, -20     #Open up two words on stack
+sw $ra, 20($sp)		#Store ra
+sw $a0, 16($sp)		#Store a0
+sw $a1, 12($sp)		#Store a1
+sw $a2, 8($sp)		#Store a2
+sw $a3, 4($sp)		#Store a3
+sw $s2, 0($sp)		#Store a4
 
-jal CalcAddress  #$v0 Las address for pixel
-lw $a2, 0($sp)		#Restore a2
-sw $v0, 0($sp)		#Store v0
+add $s2, $0, $a3	#Copy a3 to temp reg
 
-jal LookupColor     	#$v1 has color 
-lw $v0, 0($sp)    	#Restore v0
+BoxLoop:
+lw $a0, 16($sp)		#Store a0
+lw $a1, 12($sp)		#Store a1
+lw $a2, 8($sp)		#Store a2
+lw $a3, 4($sp)		#Store a3
 
-sw $v1, 0($v0)   	#make dot (color pixel)
+jal DrawHorizLine	#Draw current row
+add $a1, $a1, 1		#Increment Y coordinate
+sw $a1, 12($sp)		#Reload a1
+lw $a3, 4($sp)		#Reload a3
 
-lw $ra, 4($sp)		#Restore original ra
-addiu $sp, $sp, 8	#Move sp back up stack
+addiu $s2, $s2, -1	#Decrement remaining rows left
+bne $s2, $0, BoxLoop	#Continue when more rows are left
 
+lw $ra, 20($sp)		#Restore ra
+lw $s2, 0($sp)		#Restore a4
+addiu $sp, $sp, 20     #Restore position of stack pointer
 jr $ra
 
 ######Function to Draw a Horizontal Line#########
@@ -188,8 +200,7 @@ DrawHorizLine:
 addi $sp, $sp, -12	#store all changable variables to stack
 sw $ra, 8($sp)		#Store return address on stack
 sw $a1, 4($sp)		#Store a registers that could change
-sw $a2, 0($sp)
-sub $a3, $a3, $a1		
+sw $a2, 0($sp)		
 
 add $t0, $0, 32 	#Max Width of Bitmap
 sub $t0, $t0, $a0	#Current distance to wall
@@ -214,8 +225,7 @@ lw $a2, 0($sp)
 lw $ra, 8($sp)		#restore return address
 addi $sp, $sp, 12	#move stack pointer back up
 
-exit:li $v0, 10
-syscall
+jr $ra
 
 ######Function to Draw a Vertical Line#########
 ## $a0 for x 0-31
@@ -223,12 +233,11 @@ syscall
 ## $a2 for color number 0-7
 ## $a3 length of the horizontal line
 #####################################
-DrawHorizLine:
+DrawVertLine:
 addi $sp, $sp, -12	#store all changable variables to stack
 sw $ra, 8($sp)		#Store return address on stack
 sw $a1, 4($sp)		#Store a registers that could change
-sw $a2, 0($sp)
-sub $a3, $a3, $a1		
+sw $a2, 0($sp)	
 
 add $t0, $0, 32 	#Max Height of Bitmap
 sub $t0, $t0, $a1	#Current distance to wall
@@ -253,8 +262,30 @@ lw $a2, 0($sp)
 lw $ra, 8($sp)		#restore return address
 addi $sp, $sp, 12	#move stack pointer back up
 
-exit:li $v0, 10
-syscall
+jr $ra
+
+######Function to Draw a Dot#########
+## $a0 for x 0-31
+## $a1 for y 0-31
+## $a2 for color number 0-7 #########
+DrawDot:
+addiu $sp, $sp, -8      #Open up two words on stack
+sw $ra, 4($sp)		#Store ra
+sw $a2, 0($sp)		#Store original a2
+
+jal CalcAddress  #$v0 Las address for pixel
+lw $a2, 0($sp)		#Restore a2
+sw $v0, 0($sp)		#Store v0
+
+jal LookupColor     	#$v1 has color 
+lw $v0, 0($sp)    	#Restore v0
+
+sw $v1, 0($v0)   	#make dot (color pixel)
+
+lw $ra, 4($sp)		#Restore original ra
+addiu $sp, $sp, 8	#Move sp back up stack
+
+jr $ra
 
 ######Function to Retrieve Bitmap Display Address ###########
 ## $a0 for x 0-31
