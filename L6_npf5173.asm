@@ -161,7 +161,7 @@ jr $ra
 ## $a3 = size of the box 
 ##############################################
 DrawBox:
-addiu $sp, $sp, -20     #Open up two words on stack
+addiu $sp, $sp, -24     #Open up two words on stack
 sw $ra, 20($sp)		#Store ra
 sw $a0, 16($sp)		#Store a0
 sw $a1, 12($sp)		#Store a1
@@ -187,7 +187,8 @@ bne $s2, $0, BoxLoop	#Continue when more rows are left
 
 lw $ra, 20($sp)		#Restore ra
 lw $s2, 0($sp)		#Restore a4
-addiu $sp, $sp, 20     #Restore position of stack pointer
+addiu $sp, $sp, 24     #Restore position of stack pointer
+
 jr $ra
 
 ######Function to Draw a Horizontal Line#########
@@ -227,7 +228,7 @@ addi $sp, $sp, 12	#move stack pointer back up
 
 jr $ra
 
-######Function to Draw a Vertical Line#########
+######Function to Draw a Vertical Line #########
 ## $a0 for x 0-31
 ## $a1 for y 0-31
 ## $a2 for color number 0-7
@@ -284,6 +285,23 @@ sw $v1, 0($v0)   	#make dot (color pixel)
 
 lw $ra, 4($sp)		#Restore original ra
 addiu $sp, $sp, 8	#Move sp back up stack
+
+jr $ra
+
+########### Function to clear display (256 x 256 Bitmap Display) ####
+#####################################################################
+ClearDisplay:
+addiu $sp, $sp, -4     #Allocate space on stack to save ra
+sw $ra, 0($sp)	       #Store ra$ 
+add $a0, $0, $0	       #Hardcoded addres to start on (0,0) of 256 x 256 pixel Bitmap Display
+add $a1, $0, $0
+add $a2, $0, $0	       #Hardcoded color - black
+add $a3, $0, 32
+
+jal DrawBox
+
+lw $ra, 0($sp)	      #Restore ra
+addiu $sp, $sp, 4     #Clear ra data off the stack
 
 jr $ra
 
