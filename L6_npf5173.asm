@@ -16,6 +16,14 @@ ColorTable:
 	.word 0xff0000     #red
 	.word 0xffffff	   #white
 	
+BoxTable:
+	.word 0, 16, 5	   #Coordinate for Horizontal divider
+	.word 4, 4, 1      #Box 1, Upper Left, Yellow 
+	.word 20, 20, 2    #Box 2, Upper Right, Blue, 
+	.word 4, 20, 3     #Box 3, Bottom Left, Green,
+	.word 20, 20, 4    #Box 4, Bottom Right, Red
+	.word 16, 0, 5     #Coordinate for Vertical divider 
+	
 
 
 .text
@@ -85,6 +93,40 @@ sub $sp, $sp, $s0	 #Allocate new memory on stack, moving to next memory address
 sw $a0, 4($sp)	         #Add value to simon stack
 la $s1, 0($sp)		 #Store current address for Simon Stack
 la $sp, 0($t0)		 #Restore stack pointer to address on Stack_End
+
+jr $ra
+
+############ Function to Draw Simon Box ###################
+### $a0 Simon Box Reqest
+### $v0 Box number that was drawn
+##########################################################
+DrawSimonBox:
+addiu $sp, $sp, -8     #Allocate space on stack to save ra
+sw $ra, 4($sp)	       #Store ra
+sw $a0, 0($sp)	       #Store ra
+
+la $t0, BoxTable	#Load address of array on stack	
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2, 8($t0)          #Load word for white pixel color
+add $a3, $0, 32		#Length of line
+
+lw $t1, 0($sp)		#Request Simon box number, original a0
+mul $t1, $t1, 12	#Requested box number address offset
+la $t0, BoxTable	#Load address of array of boxes
+add $t0, $t0, $t1	#Address of Requested Box
+
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2, 8($t0)          #Load word for requested box color
+add $a3, $0, 8		#Length of line
+
+jal DrawBox
+
+lw $ra, 4($sp)	       #Restore ra
+lw $v0, 0($sp)	       #Return box "pass to later function that will 
+
+addiu $sp, $sp, 8       #Move back up stack to
 
 jr $ra
 
@@ -160,6 +202,9 @@ jr $ra
 ###################################################
 DrawQuadrants:
 
+addiu $sp, $sp, -4     #Allocate space on stack to save ra
+sw $ra, 0($sp)	       #Store ra 
+
 la $t0, BoxTable	#Load address of array on stack	
 lw $a0, 0($t0)		#Load word for x variable of horiz divider
 lw $a1, 4($t0)          #Load word for y variable of horiz divider
@@ -168,13 +213,18 @@ add $a3, $0, 32		#Length of line
 
 jal DrawHorizLine 
 
+lw $ra, 0($sp)	       #Restore ra 
+
 la $t0 BoxTable
 lw $a0, 60($t0)		#Load word for x variable of horiz divider
-lw $a1, 64($t0)          #Load word for y variable of horiz divider
-lw $a2, 68($t0)          #Load word for white pixel color
+lw $a1, 64($t0)         #Load word for y variable of horiz divider
+lw $a2, 68($t0)         #Load word for white pixel color
 add $a3, $0, 32		#Length of line
 
 jal DrawVertLine
+
+lw $ra, 0($sp)	       #Store ra 
+addiu $sp, $sp, 4      #Move back up stack
 
 jr $ra
 
@@ -211,8 +261,7 @@ bne $s2, $0, BoxLoop	#Continue when more rows are left
 
 lw $ra, 20($sp)		#Restore ra
 lw $s2, 0($sp)		#Restore a4
-addiu $sp, $sp, 24     #Restore position of stack pointer
-
+addiu $sp, $sp, 24      #Restore position of stack pointer
 jr $ra
 
 ######Function to Draw a Horizontal Line#########
@@ -316,7 +365,7 @@ jr $ra
 #####################################################################
 ClearDisplay:
 addiu $sp, $sp, -4     #Allocate space on stack to save ra
-sw $ra, 0($sp)	       #Store ra$ 
+sw $ra, 0($sp)	       #Store ra 
 add $a0, $0, $0	       #Hardcoded addres to start on (0,0) of 256 x 256 pixel Bitmap Display
 add $a1, $0, $0
 add $a2, $0, $0	       #Hardcoded color - black
