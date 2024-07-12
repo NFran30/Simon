@@ -130,6 +130,57 @@ addiu $sp, $sp, 8       #Move back up stack to
 
 jr $ra
 
+############ Function to Blink Simon Box ###################
+### $a0 Simon Box Reqest
+### $a1 $a2 Blink time "Milliseconds"
+##########################################################
+BlinkSimonBox:
+addiu $sp, $sp, -16     #Allocate space on stack to save ra
+sw $ra, 12($sp)	        #Store ra
+sw $a0, 8($sp)	        #Store Box Number requested
+sw $a1, 4($sp)		#Store Blink time
+
+la $t0, BoxTable	#Load address of array on stack	
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2, 8($t0)          #Load word for pixel color
+add $a3, $0, 32		#Length of line
+
+lw $t1, 8($sp)		#Request Simon box number, original a0
+mul $t1, $t1, 12	#Requested box number address offset
+la $t0, BoxTable	#Load address of array of boxes
+add $t0, $t0, $t1	#Address of Requested Box
+sw $t0, 0($sp)		#Store Address of BoxTable + Offset
+
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2, 8($t0)          #Load word for requested box color
+add $a3, $0, 8		#Length of line
+
+jal DrawBox
+lw $ra, 12($sp)	       #Restore ra
+
+lw $a0, 4($sp)	       #Load arguement for pause time before "Blink time"
+
+jal Pause
+lw $ra, 12($sp)	       #Restore ra
+
+lw $t0, 0($sp)		#Rstore Address of BoxTable + Offset
+lw $a0, 0($t0)		#Load word for x variable of horiz divider
+lw $a1, 4($t0)          #Load word for y variable of horiz divider
+lw $a2 ColorTable           #Load word for BLACK box color, erases the box
+add $a3, $0, 8		#Length of line
+
+jal DrawBox
+
+lw $ra, 12($sp)	       #Restore ra
+lw $a0, 8($sp)	       #Restore Box Number requested
+lw $a1, 4($sp)	       #Restore Blink time
+
+addiu $sp, $sp, 16       #Move back up stack to
+
+jr $ra
+
 ########## Blink Lights #########
 BlinkLights:
 add $t0, $0, $sp        #Temp store for current address Stack_End
@@ -393,6 +444,30 @@ mul $t2, $a0, 4
 
 add $t1, $t1, $t2
 add $v0, $t0, $t1
+
+jr $ra
+
+############## Function to Pause ##################
+##### a0 Pause time "Milliseconds"
+##############################################
+Pause:
+add $t4, $0, $a0      #Copy store time in temp register
+
+add $t0, $0, $0       #Clear registers that will time comparison test
+add $t1, $0, $0
+
+li $v0, 30            #Get current timestap
+syscall
+
+add $t0, $a0, $0      #Store initial timestap
+
+timeLoop:
+syscall		       #Call for time to compare
+add $t1, $a0, $0       #store compare time
+subu $t3, $t1, $t0     #Subtract new first time stamp from second 
+bltu $t3, $t4, timeLoop #Check to see if time has elapsed
+
+syscall
 
 jr $ra
 
