@@ -58,7 +58,7 @@ syscall                    # Exit!
 ######## Function to initalize the program, seeds random value ##########
 Init:
 addi $sp, $sp, -4	 
-sw $ra, 4($sp)          #Store stackpointer for $ra
+sw $ra, 0($sp)          #Store stackpointer for $ra
 
 li $v0, 30               #Syscall for time system, returns current time
 syscall
@@ -69,7 +69,7 @@ add $a0, $0, $0		  #Set ID of generator
 li $v0, 40                #specify read char
 syscall	
 
-lw $ra, 4($sp)          #Store stackpointer for $ra
+lw $ra, 0($sp)          #Store stackpointer for $ra
 addi $sp, $sp, 4
 
 jr $ra
