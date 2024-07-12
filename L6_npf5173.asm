@@ -24,6 +24,11 @@ BoxTable:
 	.word 20, 20, 4    #Box 4, Bottom Right, Red
 	.word 16, 0, 5     #Coordinate for Vertical divider 
 	
+BlinkTimes:
+	.word 1000	   #Millisecond Time for Simon box blinking
+	.word 500
+	.word 100
+	
 
 
 .text
@@ -32,21 +37,25 @@ la $sp, Stack_End	#point $sp to memory stack
 ######## Main Function #############
 MAIN:
 
-jal Init
+jal Init		   #Initialize program, seeds random value
+
+jal DrawQuadrants           #Draws the quadrants on the bitmap
  
 loopAgain:
-add $s3, $s3, 1
-jal GetRandNum
+add $s3, $s3, 1		   #Loop counter 
+jal GetRandNum		   #Reqests next random number to
 
-jal AddNumbToSimonStack
+jal AddNumbToSimonStack    #Adds random number onto Simon stack
 
-jal BlinkLights
-blt $s3, 20, loopAgain
+jal BlinkLights		   #Blinks the 
+blt $s3, 5, loopAgain
+
+add $s3, $0, $0		   #Clear long term storage
 
 exit:li   $v0, 10          #system call for exit
 syscall                    # Exit!
 
-######## Function to initalize the program ##########
+######## Function to initalize the program, seeds random value ##########
 Init:
 addi $sp, $sp, -4	 
 sw $ra, 4($sp)          #Store stackpointer for $ra
@@ -157,12 +166,12 @@ lw $a1, 4($t0)          #Load word for y variable of horiz divider
 lw $a2, 8($t0)          #Load word for requested box color
 add $a3, $0, 8		#Length of line
 
-jal DrawBox
+jal DrawBox		#Color the box
 lw $ra, 12($sp)	       #Restore ra
 
 lw $a0, 4($sp)	       #Load arguement for pause time before "Blink time"
 
-jal Pause
+jal Pause		#Pause
 lw $ra, 12($sp)	       #Restore ra
 
 lw $t0, 0($sp)		#Rstore Address of BoxTable + Offset
@@ -171,7 +180,7 @@ lw $a1, 4($t0)          #Load word for y variable of horiz divider
 lw $a2 ColorTable           #Load word for BLACK box color, erases the box
 add $a3, $0, 8		#Length of line
 
-jal DrawBox
+jal DrawBox		#Erase the box
 
 lw $ra, 12($sp)	       #Restore ra
 lw $a0, 8($sp)	       #Restore Box Number requested
@@ -183,30 +192,39 @@ jr $ra
 
 ########## Blink Lights #########
 BlinkLights:
+addiu $sp, $sp, -4     #Allocate space on stack to save ra
+sw $ra, 0($sp)	        #Store ra
+
 add $t0, $0, $sp        #Temp store for current address Stack_End
 
 la $sp, Simon_Array	#Load address of where the Simon values are stored
-lw $a0, 0($sp)
-li $v0, 1		#Syscall to print int
-syscall 
+lw $a0, 0($sp)		
+#li $v0, 1		#Syscall to print int
+#syscall 
 
-li $a0, 10              #load char value into arg for new line
-li $v0, 11	        #cmd to print char,
-syscall
+jal BlinkSimonBox	#Blinks the simon square
+lw $ra, 0($sp)	        #Restore ra
+
+#li $a0, 10              #load char value into arg for new line
+#li $v0, 11	        #cmd to print char,
+#syscall
 
 ble $s0, 4, exitBLoop	#When only on value, no traversal through Simon Stack, exit function
 
-add $t1, $0, $0		#Clear loop counter
+add $t1, $0, $0		#Initialize loop counter
 bLoop:
 add $t1, $t1, 4		#Clear loop counter
 addi $sp, $sp, -4	#Increment to next value on Simon stack
 lw $a0, 0($sp)
-li $v0, 1		#Syscall to print int
-syscall 
+#li $v0, 1		#Syscall to print int
+#syscall
 
-li $a0, 10              #load char value into arg for new line
-li $v0, 11	        #cmd to print char,
-syscall
+jal BlinkSimonBox
+lw $ra, 0($sp)	        #Restore ra 
+
+#li $a0, 10              #load char value into arg for new line
+#li $v0, 11	        #cmd to print char,
+#syscall
 
 blt $t1, $s0, bLoop	#Check to see if total values have been traversed
 
