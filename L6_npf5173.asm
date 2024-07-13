@@ -5,6 +5,9 @@ Stack_End:         .word 0:80
 Simon_Array: .word 0:80
 
 Error_Width:   .asciiz "Error: Horizontal line is too long\n"
+Winner:   .asciiz "Congrats, you won!\n"
+Loser:   .asciiz "Mismatch! You lost...\n"
+
 
 .data
 
@@ -50,8 +53,19 @@ jal AddNumbToSimonStack    #Calls fucntion to add random number onto Simon stack
 
 jal BlinkLights		   #Blinks the simon square(s)
 
-jal ReadMemoryMatch
+jal ReadMemoryMatch	   #Read uses pattern, return outcome
+beqz $v1, Lost		   #Return states user mismatched, inform and end came
 blt $s3, 5, loopAgain
+
+la $a0, Winner    	# load address of prompt string, user won
+li $v0, 4	    	#cmd to specify Print String Service
+syscall
+j exit
+
+Lost:la $a0, Loser    	# load address of prompt string, user lost
+li $v0, 4	    	#cmd to specify Print String Service
+syscall
+j exit
 
 add $s3, $0, $0		   #Clear long term storage
 
@@ -64,22 +78,23 @@ syscall                    # Exit!
 ReadMemoryMatch:
 add $t0, $0, $s0	#Total number of numbers on Simon stack
 la $t1, Simon_Array
-lw $t2, -4($t1) 
+#lw $t2, 0($t1) 
 
 matchLoop:
 add $v1, $0, 1		#Set return for Succesful match
-beqz $t0, exitMatch
-lw $t2, 4($t1) 
+beqz $t0, exitMatch	#When no values on Simon stack left to check, return success
+lw $t2, 0($t1) 		#Load current value on Simon stack
+addiu $t1, $t1, -4	#Move to next value address on Simon stack
 
-li $v0, 12             #specify read char
+li $v0, 12              #specify read char
 syscall
-add $t3, $0, $v0	#Moves return to temp reg
+add $t3, $0, $v0	#Moves ReadMemoryMatch return to temp reg
 
 li $a0, 10              #load char value into arg for new line
 li $v0, 11	        #cmd to print char,
 syscall
 
-add $t3, $t3, -30      #Adjust hex ascii value to decimal
+sub $t3, $t3, 0x30      #Adjust hex ascii value to decimal
 add $t0, $t0, -4	#Decrement remaining simon stack words
 beq $t3, $t2, matchLoop	#Continue if user matches number
 
