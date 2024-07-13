@@ -26,8 +26,8 @@ BoxTable:
 	
 	
 BlinkTimes:
-	.word 1000	   #Millisecond Time for Simon box blinking
-	.word 500
+	.word 750	   #Millisecond Time for Simon box blinking
+	.word 400
 	.word 100
 	
 
@@ -202,9 +202,18 @@ add $s4, $0, $sp        #Temp store for current address Stack_End
 la $sp, Simon_Array	#Load address of where the Simon values are stored
 lw $a0, 0($sp)		#Load first box to blink from Simom Stack
 la $sp, ($s4)		#Move Stack pointer back to nested functions
+
+la $t4, BlinkTimes	#Load address to check blink speed
+lw $a1, 0($t4)		#Blink Speed Beginner
+beqz $s5, Blink		#Start Blinking when level 0
+lw $a1, 4($t4)		#Blink Speed Intermediate
+beq $s5, 1, Blink	#Start Blinking when level 1
+lw $a1, 8($t4)		#Blink Speed Expert
+
 #li $v0, 1		#Syscall to print int
 #syscall 
 
+Blink:
 jal BlinkSimonBox	#Blinks the simon square
 lw $ra, 20($sp)	        #Restore ra
 
@@ -226,21 +235,27 @@ lw $a0, 0($t3)		#Load next box value for BlinkSimonBox
 #li $v0, 1		#Syscall to print int
 #syscall
 
-sw $t2, 16($sp)
+sw $t2, 16($sp)		#Store temps, bound to change in nested functions
 sw $t1, 8($sp)
 sw $t2, 4($sp)
 sw $t3, 0($sp)
 
-jal BlinkSimonBox
-lw $ra, 20($sp)	        #Restore ra 
+la $t4, BlinkTimes	#Load address to check blink speed
+lw $a1, 0($t4)		#Blink Speed Beginner
+beqz $s5, blinkNext	#Blink when level 0
+lw $a1, 4($t4)		#Blink Speed Intermediate
+beq $s5, 1, blinkNext	#Blink when level 1
+lw $a1, 8($t4)		#Blink Speed Expert
 
-lw $t2, 16($sp)
+blinkNext:jal BlinkSimonBox
+lw $ra, 20($sp)	        #Restore ra and temp registers
+lw $t2, 16($sp)		
 lw $t1, 8($sp)
 lw $t2, 4($sp)
 lw $t3, 0($sp)
 
 #li $a0, 10              #load char value into arg for new line
-#li $v0, 11	        #cmd to print char,
+#li $v0, 11	         #cmd to print char,
 #syscall
 
 blt $t1, $t2, bLoop	#Check to see if total values have been traversed
