@@ -1,13 +1,15 @@
 .data
-Stack_Top: 	     #Allocates memory
-Stack_End:    .word 0:80 
+Stack_Top: 	              #Allocates memory
+Stack_End:         .word 0:80 
 
-Simon_Array:  .word 0:80
+Simon_Array: .word 0:80
+
 Player_Array: .word 0:80
 
 Error_Width:   .asciiz "Error: Horizontal line is too long\n"
 
 .data
+
 ColorTable: 
 	.word 0x000000     #black
 	.word 0xffff00     #yellow
@@ -19,17 +21,17 @@ ColorTable:
 BoxTable:
 	.word 0, 16, 5	   #Coordinate for Horizontal divider
 	.word 4, 4, 1      #Box 1, Upper Left, Yellow 
-	.word 20, 20, 2    #Box 2, Upper Right, Blue, 
+	.word 20, 4, 2    #Box 2, Upper Right, Blue, 
 	.word 4, 20, 3     #Box 3, Bottom Left, Green,
 	.word 20, 20, 4    #Box 4, Bottom Right, Red
 	.word 16, 0, 5     #Coordinate for Vertical divider 
+	
 	
 BlinkTimes:
 	.word 1000	   #Millisecond Time for Simon box blinking
 	.word 500
 	.word 100
 	
-
 
 .text
 la $sp, Stack_End	#point $sp to memory stack
@@ -45,9 +47,10 @@ loopAgain:
 add $s3, $s3, 1		   #Loop counter 
 jal GetRandNum		   #Reqests next random number to
 
-jal AddNumbToSimonStack    #Adds random number onto Simon stack
+add $a0, $0, $v0	   #Pass return from GetRandNumb to AddNumbToSimonStack 
+jal AddNumbToSimonStack    #Calls fucntion to add random number onto Simon stack
 
-jal BlinkLights		   #Blinks the 
+jal BlinkLights		   #Blinks the simon square(s)
 blt $s3, 5, loopAgain
 
 add $s3, $0, $0		   #Clear long term storage
@@ -57,8 +60,8 @@ syscall                    # Exit!
 
 ######## Function to initalize the program, seeds random value ##########
 Init:
-addi $sp, $sp, -4	 
-sw $ra, 0($sp)          #Store stackpointer for $ra
+#addi $sp, $sp, -4	 
+#sw $ra, 0($sp)          #Store stackpointer for $ra
 
 li $v0, 30               #Syscall for time system, returns current time
 syscall
@@ -69,12 +72,13 @@ add $a0, $0, $0		  #Set ID of generator
 li $v0, 40                #specify read char
 syscall	
 
-lw $ra, 0($sp)          #Store stackpointer for $ra
-addi $sp, $sp, 4
+#lw $ra, 0($sp)          #Store stackpointer for $ra
+#addi $sp, $sp, 4
 
 jr $ra
 
 #####Add new number to sequence ######
+### v0 return a random number #######
 GetRandNum:
 add $a0, $0, $0	         #Generator 0, we only are using one generator for this lab
 sw $ra, 4($sp)           #Store stackpointer for $ra
@@ -84,58 +88,24 @@ li $v0, 42               #specify read char
 syscall
 add $a0, $a0, 1		 #Add to return, range will be 1-4
 
-sw $a0, 4($sp)	         #store random value, returned in $a0
+add $v0, $0, $a0
 
 jr $ra
 
-####Add Number to seq#######
-AddNumbToSimonStack:
-lw $a0, 4($sp)		
-addi $sp, $sp, 4	 # Move pointer back up stack after popping number
+####Add a new number to Simon Stack#######
+### a0 number to store
+#########################################
+AddNumbToSimonStack:	
 add $s0, $s0, 4		 #Increment total values on simon stack, 4=1
 
 add $t0, $0, $sp         #Temp store for current address Stack_End
 
-la $sp, Simon_Array      #Move pointer to simon stack
+la $sp, Simon_Array     #Move pointer to simon stack
 sub $sp, $sp, $s0	 #Allocate new memory on stack, moving to next memory address
 
 sw $a0, 4($sp)	         #Add value to simon stack
 la $s1, 0($sp)		 #Store current address for Simon Stack
 la $sp, 0($t0)		 #Restore stack pointer to address on Stack_End
-
-jr $ra
-
-############ Function to Draw Simon Box ###################
-### $a0 Simon Box Reqest
-### $v0 Box number that was drawn
-##########################################################
-DrawSimonBox:
-addiu $sp, $sp, -8     #Allocate space on stack to save ra
-sw $ra, 4($sp)	       #Store ra
-sw $a0, 0($sp)	       #Store ra
-
-la $t0, BoxTable	#Load address of array on stack	
-lw $a0, 0($t0)		#Load word for x variable of horiz divider
-lw $a1, 4($t0)          #Load word for y variable of horiz divider
-lw $a2, 8($t0)          #Load word for white pixel color
-add $a3, $0, 32		#Length of line
-
-lw $t1, 0($sp)		#Request Simon box number, original a0
-mul $t1, $t1, 12	#Requested box number address offset
-la $t0, BoxTable	#Load address of array of boxes
-add $t0, $t0, $t1	#Address of Requested Box
-
-lw $a0, 0($t0)		#Load word for x variable of horiz divider
-lw $a1, 4($t0)          #Load word for y variable of horiz divider
-lw $a2, 8($t0)          #Load word for requested box color
-add $a3, $0, 8		#Length of line
-
-jal DrawBox
-
-lw $ra, 4($sp)	       #Restore ra
-lw $v0, 0($sp)	       #Return box "pass to later function that will 
-
-addiu $sp, $sp, 8       #Move back up stack to
 
 jr $ra
 
@@ -166,12 +136,12 @@ lw $a1, 4($t0)          #Load word for y variable of horiz divider
 lw $a2, 8($t0)          #Load word for requested box color
 add $a3, $0, 8		#Length of line
 
-jal DrawBox		#Color the box
+jal DrawBox
 lw $ra, 12($sp)	       #Restore ra
 
 lw $a0, 4($sp)	       #Load arguement for pause time before "Blink time"
 
-jal Pause		#Pause
+jal Pause
 lw $ra, 12($sp)	       #Restore ra
 
 lw $t0, 0($sp)		#Rstore Address of BoxTable + Offset
@@ -180,7 +150,7 @@ lw $a1, 4($t0)          #Load word for y variable of horiz divider
 lw $a2 ColorTable           #Load word for BLACK box color, erases the box
 add $a3, $0, 8		#Length of line
 
-jal DrawBox		#Erase the box
+jal DrawBox
 
 lw $ra, 12($sp)	       #Restore ra
 lw $a0, 8($sp)	       #Restore Box Number requested
@@ -190,47 +160,64 @@ addiu $sp, $sp, 16       #Move back up stack to
 
 jr $ra
 
-########## Blink Lights #########
+########## Blink Lights #############
+#####################################
 BlinkLights:
-addiu $sp, $sp, -4     #Allocate space on stack to save ra
-sw $ra, 0($sp)	        #Store ra
+addiu $sp, $sp, -24     #Allocate space on stack to save ra
+sw $ra, 20($sp)	        #Store ra
+sw $t2, 16($sp)
 
-add $t0, $0, $sp        #Temp store for current address Stack_End
+add $s4, $0, $sp        #Temp store for current address Stack_End
 
 la $sp, Simon_Array	#Load address of where the Simon values are stored
-lw $a0, 0($sp)		
+lw $a0, 0($sp)		#Load first box to blink from Simom Stack
+la $sp, ($s4)		#Move Stack pointer back to nested functions
 #li $v0, 1		#Syscall to print int
 #syscall 
 
 jal BlinkSimonBox	#Blinks the simon square
-lw $ra, 0($sp)	        #Restore ra
+lw $ra, 20($sp)	        #Restore ra
 
-#li $a0, 10              #load char value into arg for new line
+#li $a0, 10             #load char value into arg for new line
 #li $v0, 11	        #cmd to print char,
 #syscall
 
 ble $s0, 4, exitBLoop	#When only on value, no traversal through Simon Stack, exit function
 
 add $t1, $0, $0		#Initialize loop counter
+add $t2, $0, $s0	#Use temp to hold total amount of bytes to traverse
+la $t3, Simon_Array	#Use temp to hold Step address, used for decrementing down Simon Stack		
+add $t3, $t3, 4		#Correct address offset
+
 bLoop:
 add $t1, $t1, 4		#Clear loop counter
-addi $sp, $sp, -4	#Increment to next value on Simon stack
-lw $a0, 0($sp)
+addi $t3, $t3, -4	#Increment to next value on Simon stack
+lw $a0, 0($t3)		#Load next box value for BlinkSimonBox
 #li $v0, 1		#Syscall to print int
 #syscall
 
+sw $t2, 16($sp)
+sw $t1, 8($sp)
+sw $t2, 4($sp)
+sw $t3, 0($sp)
+
 jal BlinkSimonBox
-lw $ra, 0($sp)	        #Restore ra 
+lw $ra, 20($sp)	        #Restore ra 
+
+lw $t2, 16($sp)
+lw $t1, 8($sp)
+lw $t2, 4($sp)
+lw $t3, 0($sp)
 
 #li $a0, 10              #load char value into arg for new line
 #li $v0, 11	        #cmd to print char,
 #syscall
 
-blt $t1, $s0, bLoop	#Check to see if total values have been traversed
+blt $t1, $t2, bLoop	#Check to see if total values have been traversed
 
 exitBLoop:
 
-la $sp, 0($t0)
+#la $sp, 0($s4)
 
 jr $ra
 
