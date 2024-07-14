@@ -1,13 +1,12 @@
 .data
-Stack_Top: 	              #Allocates memory
+
+Stack_Top: 	   #Allocates memory
 Stack_End:         .word 0:80 
-
-Simon_Array: .word 0:80
-
-Error_Width:   .asciiz "Error: Horizontal line is too long\n"
-Winner:   .asciiz "Congrats, you won!\n"
-Loser:   .asciiz "Mismatch! You lost...\n"
-
+Simon_Array:       .word 0:80
+Error_Width:       .asciiz "Error: Horizontal line is too long\n"
+Winner:            .asciiz "Congrats, you won!\n"
+Loser:             .asciiz "Mismatch! You lost...\n"
+SkillInit:         .asciiz "Welcome to Simon, please enter 1 for beginner, 2 for Intermediate, or 3 for expert level..."
 
 .data
 
@@ -43,6 +42,8 @@ MAIN:
 jal Init		   #Initialize program, seeds random value
 
 jal DrawQuadrants           #Draws the quadrants on the bitmap
+
+jal SetSkillLevel	    #Prompts user for their desired skill level
  
 loopAgain:
 add $s3, $s3, 1		   #Loop counter 
@@ -55,7 +56,7 @@ jal BlinkLights		   #Blinks the simon square(s)
 
 jal ReadMemoryMatch	   #Read uses pattern, return outcome
 beqz $v1, Lost		   #Return states user mismatched, inform and end came
-blt $s3, 5, loopAgain
+blt $s3, $s6, loopAgain
 
 la $a0, Winner    	# load address of prompt string, user won
 li $v0, 4	    	#cmd to specify Print String Service
@@ -72,13 +73,52 @@ add $s3, $0, $0		   #Clear long term storage
 exit:li   $v0, 10          #system call for exit
 syscall                    # Exit!
 
+########### Function to Set Skill Level ##################
+###########################################################
+SetSkillLevel:
+la $a0, SkillInit    	#Welcome the user and prompt for skill level
+li $v0, 4	    	#cmd to specify Print String Service
+syscall
+
+li $a0, 10              #load char value into arg for new line
+li $v0, 11	        #cmd to print char,
+syscall
+
+readAgain:
+li $v0, 12              #specify read char
+syscall
+add $t0, $0, $v0	#Moves ReadMemoryMatch return to temp reg
+
+li $a0, 10              #load char value into arg for new line
+li $v0, 11	        #cmd to print char,
+syscall
+
+bgt $t0, 0x33, readAgain #Check bounds to make sure skill range is 1-3
+blez $t0, readAgain
+
+beq $t0, 0x31, fiveKeyStrokes	#Branch to switch case to set appropriate key strokes
+beq $t0, 0x32, eightKeyStrokes
+beq $t0, 0x33, elevenKeySrokes
+
+fiveKeyStrokes:			#Set the keyStrokes for loop in main
+add $s6, $0, 5
+j skillSlected
+eightKeyStrokes:
+add $s6, $0, 8
+j skillSlected
+elevenKeySrokes:
+add $s6, $0, 11
+
+skillSlected:
+
+jr $ra
+
 ######### Fuction that Reads User Memory Match ############
 ### $v1 1 if matches sequence, 0 if failed
 ###########################################################
 ReadMemoryMatch:
 add $t0, $0, $s0	#Total number of numbers on Simon stack
 la $t1, Simon_Array
-#lw $t2, 0($t1) 
 
 matchLoop:
 add $v1, $0, 1		#Set return for Succesful match
@@ -105,9 +145,6 @@ jr $ra
 
 ######## Function to initalize the program, seeds random value ##########
 Init:
-#addi $sp, $sp, -4	 
-#sw $ra, 0($sp)          #Store stackpointer for $ra
-
 li $v0, 30               #Syscall for time system, returns current time
 syscall
 
@@ -116,9 +153,6 @@ add $a0, $0, $0		  #Set ID of generator
 
 li $v0, 40                #specify read char
 syscall	
-
-#lw $ra, 0($sp)          #Store stackpointer for $ra
-#addi $sp, $sp, 4
 
 jr $ra
 
@@ -133,7 +167,7 @@ li $v0, 42               #specify read char
 syscall
 add $a0, $a0, 1		 #Add to return, range will be 1-4
 
-add $v0, $0, $a0
+add $v0, $0, $a0	#Return random number
 
 jr $ra
 
@@ -220,24 +254,12 @@ la $sp, ($s4)		#Move Stack pointer back to nested functions
 
 la $t4, BlinkTimes	#Load address to check blink speed
 lw $a1, 0($t4)		#Blink Speed Beginner
-beqz $s5, Blink		#Start Blinking when level 0
+beq $s6, 5, Blink	#Start Blinking when level 0
 lw $a1, 4($t4)		#Blink Speed Intermediate
-beq $s5, 1, Blink	#Start Blinking when level 1
+beq $s6, 8, Blink	#Start Blinking when level 1
 lw $a1, 8($t4)		#Blink Speed Expert
 
-#li $v0, 1		#Syscall to print int
-#syscall 
-
 Blink:
-jal BlinkSimonBox	#Blinks the simon square
-lw $ra, 20($sp)	        #Restore ra
-
-#li $a0, 10             #load char value into arg for new line
-#li $v0, 11	        #cmd to print char,
-#syscall
-
-ble $s0, 4, exitBLoop	#When only on value, no traversal through Simon Stack, exit function
-
 add $t1, $0, $0		#Initialize loop counter
 add $t2, $0, $s0	#Use temp to hold total amount of bytes to traverse
 la $t3, Simon_Array	#Use temp to hold Step address, used for decrementing down Simon Stack		
@@ -247,8 +269,6 @@ bLoop:
 add $t1, $t1, 4		#Clear loop counter
 addi $t3, $t3, -4	#Increment to next value on Simon stack
 lw $a0, 0($t3)		#Load next box value for BlinkSimonBox
-#li $v0, 1		#Syscall to print int
-#syscall
 
 sw $t2, 16($sp)		#Store temps, bound to change in nested functions
 sw $t1, 8($sp)
@@ -257,9 +277,9 @@ sw $t3, 0($sp)
 
 la $t4, BlinkTimes	#Load address to check blink speed
 lw $a1, 0($t4)		#Blink Speed Beginner
-beqz $s5, blinkNext	#Blink when level 0
+beq $s6, 5, blinkNext	#Blink when level 0
 lw $a1, 4($t4)		#Blink Speed Intermediate
-beq $s5, 1, blinkNext	#Blink when level 1
+beq $s6, 8, blinkNext	#Blink when level 1
 lw $a1, 8($t4)		#Blink Speed Expert
 
 blinkNext:jal BlinkSimonBox
@@ -269,29 +289,24 @@ lw $t1, 8($sp)
 lw $t2, 4($sp)
 lw $t3, 0($sp)
 
-#li $a0, 10              #load char value into arg for new line
-#li $v0, 11	         #cmd to print char,
-#syscall
-
 blt $t1, $t2, bLoop	#Check to see if total values have been traversed
 
 exitBLoop:
-
-#la $sp, 0($s4)
-
 jr $ra
 
 ######### Function to Lookup Color from ColorTable #############
+#### a2 number for requested color
+###############################################################
 LookupColor:
-la $t1, ColorTable
-beq $a2, 0, colorBlack
+la $t1, ColorTable				#Load address where color values start
+beq $a2, 0, colorBlack				#Switch case color look up, $a2 is request color
 beq $a2, 1, colorYellow
 beq $a2, 2, colorBlue
 beq $a2, 3, colorGreen
 beq $a2, 4, colorRed
 beq $a2, 5, colorWhite
 
-colorBlack: lw $t0, 0($t1)
+colorBlack: lw $t0, 0($t1)			#Load the reqeusted color at specific memory address
 j returnColor
 
 colorYellow: lw $t0, 4($t1)
@@ -310,7 +325,7 @@ colorWhite: lw $t0, 20($t1)
 j returnColor
 
 returnColor:
-add $v1, $0, $t0
+add $v1, $0, $t0				#Return the color
 
 jr $ra
 
@@ -395,7 +410,7 @@ sw $a2, 0($sp)
 add $t0, $0, 32 	#Max Width of Bitmap
 sub $t0, $t0, $a0	#Current distance to wall
 
-ble $a3, $t0, HorizLoop
+ble $a3, $t0, HorizLoop	
 la $a0 Error_Width
 li $v0, 4
 syscall
@@ -432,19 +447,19 @@ sw $a2, 0($sp)
 add $t0, $0, 32 	#Max Height of Bitmap
 sub $t0, $t0, $a1	#Current distance to wall
 
-ble $a3, $t0, VertLoop
+ble $a3, $t0, VertLoop	#Checks requested bounds, informs user if requested width is too far for remain bitmap pixels
 la $a0 Error_Width
 li $v0, 4
 syscall
 j exit
 		
-VertLoop:
-jal DrawDot
+VertLoop:		#Loop that draw the horizontal line
+jal DrawDot		
 add $a3, $a3, -1
 add $a1, $a1, 1
 bne $a3, $0, VertLoop
 
-add $ra, $ra, 4
+add $ra, $ra, 4		#Adjusts ra
 
 lw $a1, 4($sp)		#restore register, DrawDot could change them
 lw $a2, 0($sp)
@@ -505,10 +520,10 @@ add $t0, $0, 0x10040000	#Starting address on Bitmap Display 0,0
 mul $t1, $a1, 32		#Set offset for y
 mul $t1, $t1, 4
 
-mul $t2, $a0, 4
+mul $t2, $a0, 4			#Adjusts the position for x
 
-add $t1, $t1, $t2
-add $v0, $t0, $t1
+add $t1, $t1, $t2		#Adds x and y together to caculate exact address
+add $v0, $t0, $t1		#Returns address 
 
 jr $ra
 
@@ -535,25 +550,3 @@ bltu $t3, $t4, timeLoop #Check to see if time has elapsed
 syscall
 
 jr $ra
-
-#Clear Seq
-#Clear Display
-
-
-#get Randn
-
-#add to seq
-
-#increment max
-
-#blink lights , big section, for loop
-#print number with syscall
-#pause leave light on, then turn off,
-#print new lines then conitiue
-
-
-#User check, for loop
-#get new entry from user, getChar Syscall
-#compare with same spot in sequence
-#if matches continue for loop, if not fail
-
